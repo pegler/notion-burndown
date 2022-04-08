@@ -120,8 +120,9 @@ const countPointsLeftInSprint = async (
   sprint,
   { sprintProp, estimateProp, statusExclude, teamProp, teamName }
 ) => {
+  var filter
   if (teamProp !== '') {
-    const filter = {
+    filter = {
       and: [
         {
           property: sprintProp,
@@ -138,7 +139,7 @@ const countPointsLeftInSprint = async (
       ],
     }
   } else {
-    const filter = {
+    filter = {
       property: sprintProp,
       select: {
         equals: `Sprint ${sprint}`,
