@@ -191,7 +191,11 @@ const updateDailySummaryTable = async (
         number: sprint,
       },
       Team: {
-        text: team,
+        title: [
+          {
+            text: { content: team },
+          },
+        ],
       },
       Points: {
         number: pointsLeft,
