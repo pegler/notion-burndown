@@ -15888,19 +15888,19 @@ module.exports = JSON.parse('[[[0,44],"disallowed_STD3_valid"],[[45,46],"valid"]
 var __webpack_exports__ = {};
 // This entry need to be wrapped in an IIFE because it need to be isolated against other modules in the chunk.
 (() => {
-const { Client } = __nccwpck_require__(324);
-const moment = __nccwpck_require__(9623);
-const momentTz = __nccwpck_require__(7936);
-const ChartJSImage = __nccwpck_require__(2725);
-const log = __nccwpck_require__(8063);
-const fs = __nccwpck_require__(7147);
-const core = __nccwpck_require__(2186);
+const { Client } = __nccwpck_require__(324)
+const moment = __nccwpck_require__(9623)
+const momentTz = __nccwpck_require__(7936)
+const ChartJSImage = __nccwpck_require__(2725)
+const log = __nccwpck_require__(8063)
+const fs = __nccwpck_require__(7147)
+const core = __nccwpck_require__(2186)
 
-log.setLevel("info");
-(__nccwpck_require__(2437).config)();
+log.setLevel('info')
+__nccwpck_require__(2437).config()
 
 const parseConfig = () => {
-  if (process.env.NODE_ENV === "offline") {
+  if (process.env.NODE_ENV === 'offline') {
     return {
       notion: {
         client: new Client({ auth: process.env.NOTION_KEY }),
@@ -15913,34 +15913,38 @@ const parseConfig = () => {
           sprintProp: process.env.NOTION_PROPERTY_SPRINT,
           estimateProp: process.env.NOTION_PROPERTY_ESTIMATE,
           statusExclude: process.env.NOTION_PROPERTY_PATTERN_STATUS_EXCLUDE,
+          teamProp: process.env.NOTION_PROPERTY_TEAM,
+          teamName: process.env.NOTION_TEAM_NAME,
         },
       },
       chartOptions: {
-        isIncludeWeekends: process.env.INCLUDE_WEEKENDS !== "false",
-        isSprintStart: process.env.SPRINT_START === "true",
+        isIncludeWeekends: process.env.INCLUDE_WEEKENDS !== 'false',
+        isSprintStart: process.env.SPRINT_START === 'true',
       },
-    };
+    }
   }
   return {
     notion: {
-      client: new Client({ auth: core.getInput("NOTION_KEY") }),
+      client: new Client({ auth: core.getInput('NOTION_KEY') }),
       databases: {
-        backlog: core.getInput("NOTION_DB_BACKLOG"),
-        sprintSummary: core.getInput("NOTION_DB_SPRINT_SUMMARY"),
-        dailySummary: core.getInput("NOTION_DB_DAILY_SUMMARY"),
+        backlog: core.getInput('NOTION_DB_BACKLOG'),
+        sprintSummary: core.getInput('NOTION_DB_SPRINT_SUMMARY'),
+        dailySummary: core.getInput('NOTION_DB_DAILY_SUMMARY'),
       },
       options: {
-        sprintProp: core.getInput("NOTION_PROPERTY_SPRINT"),
-        estimateProp: core.getInput("NOTION_PROPERTY_ESTIMATE"),
-        statusExclude: core.getInput("NOTION_PROPERTY_PATTERN_STATUS_EXCLUDE"),
+        sprintProp: core.getInput('NOTION_PROPERTY_SPRINT'),
+        estimateProp: core.getInput('NOTION_PROPERTY_ESTIMATE'),
+        statusExclude: core.getInput('NOTION_PROPERTY_PATTERN_STATUS_EXCLUDE'),
+        teamProp: core.getInput('NOTION_PROPERTY_TEAM'),
+        teamName: core.getInput('NOTION_TEAM_NAME'),
       },
     },
     chartOptions: {
-      isIncludeWeekends: core.getInput("INCLUDE_WEEKENDS") !== "false",
-      isSprintStart: core.getInput("SPRINT_START") === "true",
+      isIncludeWeekends: core.getInput('INCLUDE_WEEKENDS') !== 'false',
+      isSprintStart: core.getInput('SPRINT_START') === 'true',
     },
-  };
-};
+  }
+}
 
 const createNewSprintSummary = async (
   notion,
@@ -15975,7 +15979,7 @@ const createNewSprintSummary = async (
         },
       },
     },
-  });
+  })
 
 const getLatestSprintSummary = async (
   notion,
@@ -15987,55 +15991,77 @@ const getLatestSprintSummary = async (
     sorts: [
       {
         property: sprintProp,
-        direction: "descending",
+        direction: 'descending',
       },
     ],
-  });
-  const { properties } = response.results[0];
-  const { Sprint, Start, End } = properties;
+  })
+  const { properties } = response.results[0]
+  const { Sprint, Start, End } = properties
   return {
     sprint: Sprint.number,
     start: moment(Start.date.start),
     end: moment(End.date.start),
-  };
-};
+  }
+}
 
 const countPointsLeftInSprint = async (
   notion,
   backlogDb,
   sprint,
-  { sprintProp, estimateProp, statusExclude }
+  { sprintProp, estimateProp, statusExclude, teamProp, teamName }
 ) => {
-  const response = await notion.databases.query({
-    database_id: backlogDb,
-    filter: {
+  if (teamProp !== '') {
+    const filter = {
+      and: [
+        {
+          property: sprintProp,
+          select: {
+            equals: `Sprint ${sprint}`,
+          },
+        },
+        {
+          property: teamProp,
+          select: {
+            equals: teamName,
+          },
+        },
+      ],
+    }
+  } else {
+    const filter = {
       property: sprintProp,
       select: {
         equals: `Sprint ${sprint}`,
       },
-    },
-  });
-  const sprintStories = response.results;
+    }
+  }
+  const response = await notion.databases.query({
+    database_id: backlogDb,
+    filter: filter,
+  })
+  const sprintStories = response.results
   const ongoingStories = sprintStories.filter(
-    (item) =>
-      !new RegExp(statusExclude).test(item.properties.Status.select.name)
-  );
+    item => !new RegExp(statusExclude).test(item.properties.Status.select.name)
+  )
   return ongoingStories.reduce((accum, item) => {
     if (item.properties[estimateProp]) {
-      const points = item.properties[estimateProp].number;
-      return accum + points;
+      const points = item.properties[estimateProp].number
+      return accum + points
     }
-    return accum;
-  }, 0);
-};
+    return accum
+  }, 0)
+}
 
 const updateDailySummaryTable = async (
   notion,
   dailySummaryDb,
   sprint,
+  team,
   pointsLeft
 ) => {
-  const today = moment().startOf("day").format("YYYY-MM-DD");
+  const today = moment()
+    .startOf('day')
+    .format('YYYY-MM-DD')
   await notion.pages.create({
     parent: {
       database_id: dailySummaryDb,
@@ -16053,6 +16079,9 @@ const updateDailySummaryTable = async (
       Sprint: {
         number: sprint,
       },
+      Team: {
+        text: team,
+      },
       Points: {
         number: pointsLeft,
       },
@@ -16060,13 +16089,13 @@ const updateDailySummaryTable = async (
         date: { start: today, end: null },
       },
     },
-  });
-};
+  })
+}
 
-const isWeekend = (date) => {
-  const dayOfWeek = moment(date).format("ddd");
-  return dayOfWeek === "Sat" || dayOfWeek === "Sun";
-};
+const isWeekend = date => {
+  const dayOfWeek = moment(date).format('ddd')
+  return dayOfWeek === 'Sat' || dayOfWeek === 'Sun'
+}
 
 /**
  * Calculates the number of weekdays from {@link start} to {@link end}
@@ -16075,14 +16104,14 @@ const isWeekend = (date) => {
  * @returns number of weekdays between both dates
  */
 const getNumberOfWeekdays = (start, end) => {
-  let weekdays = 0;
-  for (const cur = moment(start); !cur.isAfter(end); cur.add(1, "days")) {
+  let weekdays = 0
+  for (const cur = moment(start); !cur.isAfter(end); cur.add(1, 'days')) {
     if (!isWeekend(cur)) {
-      weekdays += 1;
+      weekdays += 1
     }
   }
-  return weekdays;
-};
+  return weekdays
+}
 
 /**
  * Calculates the points left for each day of the sprint so far
@@ -16094,66 +16123,79 @@ const getPointsLeftByDay = async (
   notion,
   dailySummaryDb,
   sprint,
+  team,
   start,
   isIncludeWeekends
 ) => {
   const response = await notion.databases.query({
     database_id: dailySummaryDb,
     filter: {
-      property: "Sprint",
-      number: {
-        equals: sprint,
-      },
+      and: [
+        {
+          property: 'Sprint',
+          number: {
+            equals: sprint,
+          },
+        },
+        {
+          property: 'Team',
+          number: {
+            equals: team,
+          },
+        },
+      ],
     },
     sorts: [
       {
-        property: "Date",
-        direction: "ascending",
+        property: 'Date',
+        direction: 'ascending',
       },
     ],
-  });
-  const pointsLeftByDay = [];
-  response.results.forEach((result) => {
-    const { properties } = result;
-    const { Date, Points } = properties;
-    const day = moment(Date.date.start).diff(start, "days");
+  })
+  const pointsLeftByDay = []
+  response.results.forEach(result => {
+    const { properties } = result
+    const { Date, Points } = properties
+    const day = moment(Date.date.start).diff(start, 'days')
     if (pointsLeftByDay[day]) {
       log.warn(
         JSON.stringify({
-          message: "Found duplicate entry",
+          message: 'Found duplicate entry',
           date: Date.date.start,
           points: Points.number,
         })
-      );
+      )
     }
-    pointsLeftByDay[day] = Points.number;
-  });
-  const numDaysSinceSprintStart = moment().startOf("day").diff(start, "days");
+    pointsLeftByDay[day] = Points.number
+  })
+  const numDaysSinceSprintStart = moment()
+    .startOf('day')
+    .diff(start, 'days')
   for (let i = 0; i < numDaysSinceSprintStart; i += 1) {
     if (!pointsLeftByDay[i]) {
-      pointsLeftByDay[i] = 0;
+      pointsLeftByDay[i] = 0
     }
   }
-  log.info(JSON.stringify({ numDaysSinceSprintStart }));
+  log.info(JSON.stringify({ numDaysSinceSprintStart }))
 
   if (!isIncludeWeekends) {
     // remove weekend entries
-    let index = 0;
+    let index = 0
     for (
       const cur = moment(start);
       index < pointsLeftByDay.length;
-      cur.add(1, "days")
+      cur.add(1, 'days')
     ) {
       if (isWeekend(cur)) {
-        pointsLeftByDay.splice(index, 1);
+        pointsLeftByDay.splice(index, 1)
       } else {
-        index += 1;
+        index += 1
       }
     }
   }
 
-  return pointsLeftByDay;
-};
+  return pointsLeftByDay
+}
 
 /**
  * Generates the ideal burndown line for the sprint. Work is assumed to be done on
@@ -16175,7 +16217,7 @@ const getIdealBurndown = (
   numWeekdays,
   isIncludeWeekends
 ) => {
-  const pointsPerDay = initialPoints / numWeekdays;
+  const pointsPerDay = initialPoints / numWeekdays
 
   log.info(
     JSON.stringify({
@@ -16183,34 +16225,34 @@ const getIdealBurndown = (
       numWeekdays,
       pointsPerDay,
     })
-  );
+  )
 
-  const idealBurndown = [];
-  const cur = moment(start);
-  const afterEnd = moment(end).add(1, "days"); // to include the end day data point
-  let isPrevDayWeekday = false;
-  for (let index = 0; cur.isBefore(afterEnd); index += 1, cur.add(1, "days")) {
+  const idealBurndown = []
+  const cur = moment(start)
+  const afterEnd = moment(end).add(1, 'days') // to include the end day data point
+  let isPrevDayWeekday = false
+  for (let index = 0; cur.isBefore(afterEnd); index += 1, cur.add(1, 'days')) {
     // if not including the weekends, just skip over the weekend days
     if (!isIncludeWeekends) {
       while (isWeekend(cur)) {
-        cur.add(1, "days");
+        cur.add(1, 'days')
       }
     }
 
     if (index === 0) {
-      idealBurndown[index] = initialPoints;
+      idealBurndown[index] = initialPoints
     } else {
       idealBurndown[index] =
-        idealBurndown[index - 1] - (isPrevDayWeekday ? pointsPerDay : 0);
+        idealBurndown[index - 1] - (isPrevDayWeekday ? pointsPerDay : 0)
     }
 
-    isPrevDayWeekday = !isWeekend(cur);
+    isPrevDayWeekday = !isWeekend(cur)
   }
 
   // rounds to 2 decimal places, which prevents the graph from getting jagged
   // from overtruncation when there's less than 30 points
-  return idealBurndown.map((points) => +points.toFixed(2));
-};
+  return idealBurndown.map(points => +points.toFixed(2))
+}
 
 /**
  * Generates the labels for the chart from 1 to {@link numberOfDays} + 1
@@ -16218,9 +16260,9 @@ const getIdealBurndown = (
  * @param {number} numberOfDays Number of workdays in the sprint
  * @returns {number[]} Labels for the chart
  */
-const getChartLabels = (numberOfDays) =>
+const getChartLabels = numberOfDays =>
   // cool way to generate numbers from 1 to n
-  [...Array(numberOfDays).keys()].map((i) => i + 1);
+  [...Array(numberOfDays).keys()].map(i => i + 1)
 
 /**
  * Generates the data to be displayed on the chart. Work is assumed to be
@@ -16234,52 +16276,54 @@ const getChartDatasets = async (
   notion,
   dailySummaryDb,
   sprint,
+  team,
   start,
   end,
   { isIncludeWeekends }
 ) => {
-  const numDaysInSprint = moment(end).diff(start, "days") + 1;
-  const lastFullDay = moment(end).add(-1, "days");
-  const numWeekdays = getNumberOfWeekdays(start, lastFullDay);
+  const numDaysInSprint = moment(end).diff(start, 'days') + 1
+  const lastFullDay = moment(end).add(-1, 'days')
+  const numWeekdays = getNumberOfWeekdays(start, lastFullDay)
 
   const pointsLeftByDay = await getPointsLeftByDay(
     notion,
     dailySummaryDb,
     sprint,
+    team,
     start,
     isIncludeWeekends
-  );
+  )
   const idealBurndown = getIdealBurndown(
     start,
     end,
     pointsLeftByDay[0],
     numWeekdays,
     isIncludeWeekends
-  );
+  )
   const labels = getChartLabels(
     isIncludeWeekends ? numDaysInSprint : numWeekdays + 1
-  );
+  )
 
-  return { labels, pointsLeftByDay, idealBurndown };
-};
+  return { labels, pointsLeftByDay, idealBurndown }
+}
 
 const generateChart = (data, idealBurndown, labels) => {
   const chart = ChartJSImage()
     .chart({
-      type: "line",
+      type: 'line',
       data: {
         labels,
         datasets: [
           {
-            label: "Burndown",
-            borderColor: "#ef4444",
-            backgroundColor: "rgba(255,+99,+132,+.5)",
+            label: 'Burndown',
+            borderColor: '#ef4444',
+            backgroundColor: 'rgba(255,+99,+132,+.5)',
             data,
           },
           {
-            label: "Constant",
-            borderColor: "#cad0d6",
-            backgroundColor: "rgba(54,+162,+235,+.5)",
+            label: 'Constant',
+            borderColor: '#cad0d6',
+            backgroundColor: 'rgba(54,+162,+235,+.5)',
             data: idealBurndown,
           },
         ],
@@ -16287,7 +16331,7 @@ const generateChart = (data, idealBurndown, labels) => {
       options: {
         title: {
           display: true,
-          text: "Sprint Burndown",
+          text: 'Sprint Burndown',
         },
         legend: { display: false },
         scales: {
@@ -16295,7 +16339,7 @@ const generateChart = (data, idealBurndown, labels) => {
             {
               scaleLabel: {
                 display: true,
-                labelString: "Day",
+                labelString: 'Day',
               },
             },
           ],
@@ -16304,7 +16348,7 @@ const generateChart = (data, idealBurndown, labels) => {
               stacked: false,
               scaleLabel: {
                 display: true,
-                labelString: "Points Left",
+                labelString: 'Points Left',
               },
               ticks: {
                 beginAtZero: true,
@@ -16315,62 +16359,62 @@ const generateChart = (data, idealBurndown, labels) => {
         },
       },
     }) // Line chart
-    .backgroundColor("white")
+    .backgroundColor('white')
     .width(500) // 500px
-    .height(300); // 300px
-  return chart;
-};
+    .height(300) // 300px
+  return chart
+}
 
 const writeChartToFile = async (chart, dir, filenamePrefix) => {
   if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+    fs.mkdirSync(dir, { recursive: true })
   }
-  await chart.toFile(`${dir}/${filenamePrefix}-burndown.png`);
-};
+  await chart.toFile(`${dir}/${filenamePrefix}-burndown.png`)
+}
 
 const run = async () => {
-  const { notion, chartOptions } = parseConfig();
+  const { notion, chartOptions } = parseConfig()
 
-  let sprint;
-  let start;
-  let end;
-  ({ sprint, start, end } = await getLatestSprintSummary(
+  let sprint
+  let start
+  let end
+  ;({ sprint, start, end } = await getLatestSprintSummary(
     notion.client,
     notion.databases.sprintSummary,
     { sprintProp: notion.options.sprintProp }
-  ));
+  ))
   log.info(
-    JSON.stringify({ message: "Found latest sprint", sprint, start, end })
-  );
+    JSON.stringify({ message: 'Found latest sprint', sprint, start, end })
+  )
 
-  const today = momentTz.tz(new Date(), "Asia/Singapore");
+  const today = momentTz.tz(new Date(), 'Asia/Singapore')
   if (chartOptions.isSprintStart) {
     if (today.isSameOrAfter(moment(end))) {
-      sprint += 1;
-      start = today.format("YYYY-MM-DD");
-      end = today.add(14, "days").format("YYYY-MM-DD");
+      sprint += 1
+      start = today.format('YYYY-MM-DD')
+      end = today.add(14, 'days').format('YYYY-MM-DD')
       await createNewSprintSummary(
         notion.client,
         notion.databases.sprintSummary,
         { sprint, start, end }
-      );
+      )
       log.info(
         JSON.stringify({
-          message: "Created new sprint summary",
+          message: 'Created new sprint summary',
           sprint,
           start,
           end,
         })
-      );
+      )
     } else {
       log.info(
         JSON.stringify({
-          message: "Not sprint start. Skipping rest of steps.",
+          message: 'Not sprint start. Skipping rest of steps.',
           currSprintEnd: end,
-          today: today.format("YYYY-MM-DD"),
+          today: today.format('YYYY-MM-DD'),
         })
-      );
-      return;
+      )
+      return
     }
   }
 
@@ -16382,29 +16426,32 @@ const run = async () => {
       sprintProp: notion.options.sprintProp,
       estimateProp: notion.options.estimateProp,
       statusExclude: notion.options.statusExclude,
+      teamProp: notion.options.teamProp,
+      teamName: notion.options.teamName,
     }
-  );
+  )
   log.info(
     JSON.stringify({
-      message: "Counted points left in sprint",
+      message: 'Counted points left in sprint',
       sprint,
       pointsLeftInSprint,
     })
-  );
+  )
 
   await updateDailySummaryTable(
     notion.client,
     notion.databases.dailySummary,
     sprint,
+    notion.options.teamName,
     pointsLeftInSprint
-  );
+  )
   log.info(
     JSON.stringify({
-      message: "Updated daily summary table",
+      message: 'Updated daily summary table',
       sprint,
       pointsLeftInSprint,
     })
-  );
+  )
 
   const {
     labels,
@@ -16414,23 +16461,32 @@ const run = async () => {
     notion.client,
     notion.databases.dailySummary,
     sprint,
+    notion.options.teamName,
     start,
     end,
     {
       isIncludeWeekends: chartOptions.isIncludeWeekends,
     }
-  );
-  log.info(JSON.stringify({ labels, data, idealBurndown }));
-  const chart = generateChart(data, idealBurndown, labels);
+  )
+  log.info(JSON.stringify({ labels, data, idealBurndown }))
+  const chart = generateChart(data, idealBurndown, labels)
 
-  await writeChartToFile(chart, "./out/all", `sprint${sprint}-${Date.now()}`);
-  await writeChartToFile(chart, "./out/latest", `sprint${sprint}-latest`);
+  await writeChartToFile(
+    chart,
+    './out/all',
+    `sprint${sprint}-${team}-${Date.now()}`
+  )
+  await writeChartToFile(
+    chart,
+    './out/latest',
+    `sprint${sprint}-${team}-latest`
+  )
   log.info(
-    JSON.stringify({ message: "Generated burndown chart", sprint, data })
-  );
-};
+    JSON.stringify({ message: 'Generated burndown chart', sprint, data })
+  )
+}
 
-run();
+run()
 
 })();
 
