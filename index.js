@@ -132,7 +132,7 @@ const countPointsLeftInSprint = async (
         },
         {
           property: teamProp,
-          text: {
+          select: {
             equals: teamName,
           },
         },
@@ -255,7 +255,7 @@ const getPointsLeftByDay = async (
         },
         {
           property: 'Team',
-          select: {
+          rich_text: {
             equals: team,
           },
         },
