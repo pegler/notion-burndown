@@ -16145,7 +16145,7 @@ const getPointsLeftByDay = async (
         },
         {
           property: 'Team',
-          number: {
+          select: {
             equals: team,
           },
         },
