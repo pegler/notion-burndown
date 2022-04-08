@@ -590,12 +590,12 @@ const run = async () => {
   await writeChartToFile(
     chart,
     './out/all',
-    `sprint${sprint}-${team}-${Date.now()}`
+    `sprint${sprint}-${notion.options.teamName}-${Date.now()}`
   )
   await writeChartToFile(
     chart,
     './out/latest',
-    `sprint${sprint}-${team}-latest`
+    `sprint${sprint}-${notion.options.teamName}-latest`
   )
   log.info(
     JSON.stringify({ message: 'Generated burndown chart', sprint, data })
