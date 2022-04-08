@@ -191,8 +191,9 @@ const updateDailySummaryTable = async (
         number: sprint,
       },
       Team: {
-        title: [
+        rich_text: [
           {
+            type: 'text',
             text: { content: team },
           },
         ],
