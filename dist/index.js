@@ -16313,7 +16313,7 @@ const getChartDatasets = async (
   return { labels, pointsLeftByDay, idealBurndown }
 }
 
-const generateChart = (data, idealBurndown, labels) => {
+const generateChart = (data, idealBurndown, labels, title) => {
   const chart = ChartJSImage()
     .chart({
       type: 'line',
@@ -16337,7 +16337,7 @@ const generateChart = (data, idealBurndown, labels) => {
       options: {
         title: {
           display: true,
-          text: 'Sprint Burndown',
+          text: title,
         },
         legend: { display: false },
         scales: {
@@ -16475,7 +16475,12 @@ const run = async () => {
     }
   )
   log.info(JSON.stringify({ labels, data, idealBurndown }))
-  const chart = generateChart(data, idealBurndown, labels)
+  const chart = generateChart(
+    data,
+    idealBurndown,
+    labels,
+    `Sprint ${sprint} - ${notion.options.teamName}`
+  )
 
   await writeChartToFile(
     chart,
